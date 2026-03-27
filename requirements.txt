@@ -1,5 +1,6 @@
 langchain
 langchain-community
+langchain-classic
 langchain-openai
 langchain-text-splitters
 langchain-experimental
@@ -9,6 +10,8 @@ openai
 
 faiss-cpu
 pymupdf
+rank-bm25
+flashrank
 
 gradio
 python-dotenv

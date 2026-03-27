@@ -1,14 +1,18 @@
 """
 담당: RAG팀
-역할: KT 제품 브로슈어 기반 RAG 챗봇 (멀티턴 대화 지원)
+역할: KT 제품 브로슈어 기반 RAG 챗봇
+      - 멀티턴 대화 지원
+      - Hybrid Search (BM25 + FAISS) + Reranking
+      - 스트리밍 응답
+      - 페이지 번호 출처 표시
 """
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, AIMessage
-from typing import List
+from typing import List, Generator
 from shared.llm import get_llm
-from rag.indexer import load_index
+from rag.retriever import get_reranked_retriever
 
 
 # 이전 대화를 고려해 검색용 독립 질문으로 재구성하는 프롬프트
@@ -43,6 +47,21 @@ def _format_docs(docs: List[Document]) -> str:
     return "\n\n".join(doc.page_content for doc in docs)
 
 
+def _format_sources(docs: List[Document]) -> List[str]:
+    """출처를 '파일명 p.페이지' 형식으로 반환합니다."""
+    seen = set()
+    sources = []
+    for doc in docs:
+        filename = doc.metadata.get("source_file", "알 수 없음")
+        page = doc.metadata.get("page", None)
+        # PyMuPDF는 0-indexed이므로 +1
+        label = f"{filename} p.{page + 1}" if page is not None else filename
+        if label not in seen:
+            seen.add(label)
+            sources.append(label)
+    return sources
+
+
 def _to_lc_messages(history: list) -> list:
     """Gradio history → LangChain 메시지 리스트 변환.
     dict, ChatMessage 객체 등 Gradio 버전별 형식을 모두 처리합니다.
@@ -66,35 +85,28 @@ def _to_lc_messages(history: list) -> list:
     return messages
 
 
-def chat(query: str, history: list = None) -> dict:
-    """
-    질문과 대화 히스토리를 받아 RAG 응답을 반환합니다.
+def _get_search_query(query: str, chat_history: list, llm) -> str:
+    """히스토리가 있으면 독립 질문으로 재구성합니다."""
+    if not chat_history:
+        return query
+    condense_chain = CONDENSE_PROMPT | llm | StrOutputParser()
+    return condense_chain.invoke({"input": query, "chat_history": chat_history})
 
-    Args:
-        query: 현재 사용자 질문
-        history: Gradio history 형식 [[user, assistant], ...]
-    """
+
+def chat(query: str, history: list = None) -> dict:
+    """질문과 대화 히스토리를 받아 RAG 응답을 반환합니다."""
     history = history or []
     chat_history = _to_lc_messages(history)
-
-    vectorstore = load_index()
     llm = get_llm(temperature=0.0)
 
-    # 1단계: 히스토리가 있으면 독립 질문으로 재구성 (검색 품질 향상)
-    if chat_history:
-        condense_chain = CONDENSE_PROMPT | llm | StrOutputParser()
-        search_query = condense_chain.invoke({
-            "input": query,
-            "chat_history": chat_history,
-        })
-    else:
-        search_query = query
+    # 1단계: 질문 재구성
+    search_query = _get_search_query(query, chat_history, llm)
 
-    # 2단계: 재구성된 질문으로 문서 검색
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+    # 2단계: Hybrid Search + Reranking
+    retriever = get_reranked_retriever(k_fetch=10, k_final=5)
     docs = retriever.invoke(search_query)
 
-    # 3단계: 히스토리 + 문서 + 질문으로 최종 답변 생성
+    # 3단계: 답변 생성
     qa_chain = QA_PROMPT | llm | StrOutputParser()
     answer = qa_chain.invoke({
         "input": query,
@@ -102,12 +114,37 @@ def chat(query: str, history: list = None) -> dict:
         "context": _format_docs(docs),
     })
 
-    sources = list({
-        doc.metadata.get("source_file", "알 수 없음")
-        for doc in docs
-    })
-
     return {
         "answer": answer,
-        "sources": sources,
+        "sources": _format_sources(docs),
     }
+
+
+def chat_stream(query: str, history: list = None) -> Generator[str, None, None]:
+    """스트리밍 응답을 생성합니다. Gradio에서 글자 단위로 출력됩니다."""
+    history = history or []
+    chat_history = _to_lc_messages(history)
+    llm = get_llm(temperature=0.0)
+
+    # 1단계: 질문 재구성
+    search_query = _get_search_query(query, chat_history, llm)
+
+    # 2단계: Hybrid Search + Reranking
+    retriever = get_reranked_retriever(k_fetch=10, k_final=5)
+    docs = retriever.invoke(search_query)
+
+    # 3단계: 스트리밍 답변 생성
+    qa_chain = QA_PROMPT | llm | StrOutputParser()
+    accumulated = ""
+    for chunk in qa_chain.stream({
+        "input": query,
+        "chat_history": chat_history,
+        "context": _format_docs(docs),
+    }):
+        accumulated += chunk
+        yield accumulated
+
+    # 마지막에 출처 추가
+    sources = _format_sources(docs)
+    if sources:
+        yield accumulated + f"\n\n📄 **참고 자료:** {', '.join(sources)}"

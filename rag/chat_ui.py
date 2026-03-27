@@ -1,21 +1,17 @@
 """
 담당: RAG팀
-역할: KT 제품 RAG 챗봇 Gradio UI (멀티턴 지원)
+역할: KT 제품 RAG 챗봇 Gradio UI (스트리밍 + 멀티턴)
 """
 import gradio as gr
-from rag.chatbot import chat
+from rag.chatbot import chat_stream
 
 
-def respond(message: str, history: list) -> str:
-    """Gradio ChatInterface 콜백. history는 [[user, assistant], ...] 형식."""
+def respond(message: str, history: list):
+    """스트리밍 응답 생성기. Gradio가 yield된 값을 실시간으로 표시합니다."""
     if not message.strip():
-        return ""
-    result = chat(message, history)
-    answer = result["answer"]
-    sources = result["sources"]
-    if sources:
-        answer += f"\n\n📄 **참고 자료:** {', '.join(sources)}"
-    return answer
+        yield ""
+        return
+    yield from chat_stream(message, history)
 
 
 def create_ui() -> gr.Blocks:
@@ -28,6 +24,7 @@ def create_ui() -> gr.Blocks:
                 "KT cloudflex가 뭐야?",
                 "5G 업무망 특징이 뭐야?",
                 "GPU 서비스 관련 제품 알려줘",
+                "보안 관련 제품 뭐가 있어?",
             ],
         )
     return demo
