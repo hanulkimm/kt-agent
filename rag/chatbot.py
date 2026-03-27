@@ -44,13 +44,31 @@ def _format_docs(docs: List[Document]) -> str:
 
 
 def _to_lc_messages(history: list) -> list:
-    """Gradio history (list of [user, assistant]) → LangChain 메시지 리스트 변환"""
+    """Gradio history → LangChain 메시지 리스트 변환.
+    Gradio 최신버전: [{"role": "user"/"assistant", "content": "..."}]
+    구버전: [[user_msg, ai_msg], ...]
+    """
     messages = []
-    for user_msg, ai_msg in history:
-        if user_msg:
-            messages.append(HumanMessage(content=user_msg))
-        if ai_msg:
-            messages.append(AIMessage(content=ai_msg))
+    if not history:
+        return messages
+
+    # 최신 Gradio: dict 형식
+    if isinstance(history[0], dict):
+        for item in history:
+            role = item.get("role")
+            content = item.get("content", "")
+            if role == "user" and content:
+                messages.append(HumanMessage(content=content))
+            elif role == "assistant" and content:
+                messages.append(AIMessage(content=content))
+    # 구버전 Gradio: [user, assistant] 튜플/리스트 형식
+    else:
+        for user_msg, ai_msg in history:
+            if user_msg:
+                messages.append(HumanMessage(content=user_msg))
+            if ai_msg:
+                messages.append(AIMessage(content=ai_msg))
+
     return messages
 
 
