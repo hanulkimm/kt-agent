@@ -1,5 +1,5 @@
-from langchain_openai import ChatOpenAI
-from shared.config import OPENAI_API_KEY, OPENAI_MODEL
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from shared.config import OPENAI_API_KEY, OPENAI_MODEL, EMBEDDING_MODEL
 
 
 def get_llm(temperature: float = 0.0) -> ChatOpenAI:
@@ -7,5 +7,13 @@ def get_llm(temperature: float = 0.0) -> ChatOpenAI:
     return ChatOpenAI(
         model=OPENAI_MODEL,
         temperature=temperature,
+        api_key=OPENAI_API_KEY,
+    )
+
+
+def get_embeddings() -> OpenAIEmbeddings:
+    """공통 임베딩 모델 반환."""
+    return OpenAIEmbeddings(
+        model=EMBEDDING_MODEL,
         api_key=OPENAI_API_KEY,
     )
