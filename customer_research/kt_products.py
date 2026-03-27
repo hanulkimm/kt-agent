@@ -146,6 +146,26 @@ KT_B2B_PRODUCTS: list[dict] = [
         "keywords": ["클라우드 전용선", "Direct Connect", "클라우드 연결", "하이브리드"],
     },
     {
+        "id": "giga_office",
+        "name": "KT GiGA Office",
+        "category": "데이터 서비스",
+        "sub_category": "기업인터넷",
+        "url": "https://enterprise.kt.com",
+        "description": "기업 전용 인터넷 회선 + 구내 WiFi를 결합한 통합 서비스. 소호·중소기업 대상으로 인터넷·전화·WiFi를 하나의 계약으로 제공.",
+        "use_cases": ["소호·중소기업 인터넷 구축", "사무실 WiFi 통합", "인터넷+전화 결합"],
+        "keywords": ["기업인터넷", "WiFi", "소호", "중소기업", "GiGA Office", "유선인터넷"],
+    },
+    {
+        "id": "kornet",
+        "name": "KT Kornet",
+        "category": "데이터 서비스",
+        "sub_category": "기업인터넷",
+        "url": "https://enterprise.kt.com",
+        "description": "기업 전용 고속 인터넷 회선 서비스. 안정적인 대역폭·SLA·고정 IP를 제공하며 대기업·공공기관에 적합.",
+        "use_cases": ["대기업·공공기관 인터넷 회선", "고정IP·SLA 보장 인터넷", "본사-지점 간 안정적 연결"],
+        "keywords": ["Kornet", "기업인터넷", "전용인터넷", "고정IP", "SLA", "대기업"],
+    },
+    {
         "id": "flexline",
         "name": "KT Flexline (기업인터넷)",
         "category": "데이터 서비스",
@@ -412,6 +432,17 @@ KT_B2B_PRODUCTS: list[dict] = [
         "keywords": ["AI 교육", "미래교육", "에듀테크", "코딩", "디지털교육", "학교"],
     },
 ]
+
+
+# 브로슈어 보유 상품 ID 목록 (RAG 인덱스에 포함된 11개)
+BROCHURE_PRODUCT_IDS = {
+    "sota_k", "k_intelligence_studio", "k_gpuaas",
+    "cloudflex", "managed_private_cloud",
+    "giga_office", "kornet", "flexline",
+    "biz_5g", "secure_utm", "giga_energy_trade",
+}
+
+BROCHURE_PRODUCTS = [p for p in KT_B2B_PRODUCTS if p["id"] in BROCHURE_PRODUCT_IDS]
 
 
 def get_all_products() -> list[dict]:

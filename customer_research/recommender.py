@@ -5,7 +5,7 @@
 import json
 from langchain_core.messages import HumanMessage
 from shared.llm import get_llm
-from customer_research.kt_products import KT_B2B_PRODUCTS
+from customer_research.kt_products import BROCHURE_PRODUCTS as KT_B2B_PRODUCTS
 
 
 def recommend_products(company_name: str, company_summary: str) -> str:

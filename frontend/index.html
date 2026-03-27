@@ -146,13 +146,13 @@
         <div id="customer-steps" class="space-y-2"></div>
       </div>
 
-      <!-- 결과 -->
-      <div id="customer-result" class="hidden space-y-4">
-        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+      <!-- 결과 (2컬럼) -->
+      <div id="customer-result" class="hidden grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-2xl border border-gray-200 p-6 overflow-y-auto max-h-[65vh]">
           <h3 class="text-sm font-semibold text-kt-gray uppercase tracking-wide mb-3">기업 현황 분석</h3>
           <div id="customer-analysis" class="prose text-sm text-kt-dark leading-relaxed"></div>
         </div>
-        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+        <div class="bg-white rounded-2xl border border-gray-200 p-6 overflow-y-auto max-h-[65vh]">
           <h3 class="text-sm font-semibold text-kt-gray uppercase tracking-wide mb-3">KT 상품 추천</h3>
           <div id="customer-recommendation" class="prose text-sm text-kt-dark leading-relaxed"></div>
         </div>
