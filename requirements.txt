@@ -1,5 +1,6 @@
 langchain
 langchain-community
+langchain-classic
 langchain-openai
 langchain-text-splitters
 langchain-experimental
@@ -9,14 +10,19 @@ openai
 
 faiss-cpu
 pymupdf
+rank-bm25
+flashrank
 
 gradio
+fastapi
+uvicorn[standard]
+python-multipart
 python-dotenv
 pandas
 tqdm
 networkx
 wikipedia
-duckduckgo-search
+ddgs
 
 langchain-graph-retriever
 graph-retriever
