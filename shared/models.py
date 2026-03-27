@@ -14,8 +14,14 @@ class CustomerProfile(BaseModel):
 class MarketReport(BaseModel):
     """시장 동향 리포트 데이터 모델"""
     topic: str
+    product_name: Optional[str] = None
+    industry: Optional[str] = None
+    market_overview: Optional[str] = None
     summary: Optional[str] = None
     key_trends: Optional[list[str]] = None
+    competitive_landscape: Optional[str] = None
+    opportunities: Optional[list[str]] = None
+    threats: Optional[list[str]] = None
     sources: Optional[list[str]] = None
 
 

@@ -4,7 +4,7 @@
 """
 from shared.llm import get_llm
 from shared.models import CustomerProfile
-from langchain.schema import HumanMessage
+from langchain_core.messages import HumanMessage
 
 
 def build_profile(company_name: str, raw_results: list[dict], news: list[dict] = None) -> CustomerProfile:

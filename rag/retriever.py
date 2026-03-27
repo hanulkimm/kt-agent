@@ -3,7 +3,7 @@
 역할: FAISS 인덱스에서 관련 문서 검색
 """
 from langchain_community.vectorstores import FAISS
-from langchain.schema import Document
+from langchain_core.documents import Document
 from typing import List
 from rag.indexer import load_index
 
