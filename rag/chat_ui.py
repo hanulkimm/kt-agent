@@ -1,15 +1,16 @@
 """
 담당: RAG팀
-역할: KT 제품 RAG 챗봇 Gradio UI
+역할: KT 제품 RAG 챗봇 Gradio UI (멀티턴 지원)
 """
 import gradio as gr
 from rag.chatbot import chat
 
 
 def respond(message: str, history: list) -> str:
+    """Gradio ChatInterface 콜백. history는 [[user, assistant], ...] 형식."""
     if not message.strip():
         return ""
-    result = chat(message)
+    result = chat(message, history)
     answer = result["answer"]
     sources = result["sources"]
     if sources:
@@ -20,7 +21,7 @@ def respond(message: str, history: list) -> str:
 def create_ui() -> gr.Blocks:
     with gr.Blocks() as demo:
         gr.Markdown("## KT 제품 문서 챗봇")
-        gr.Markdown("KT 제품 브로슈어를 기반으로 질문에 답변합니다.")
+        gr.Markdown("KT 제품 브로슈어를 기반으로 질문에 답변합니다. 이전 대화를 기억합니다.")
         gr.ChatInterface(
             fn=respond,
             examples=[
