@@ -12,7 +12,7 @@ from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, AIMessage
 from typing import List, Generator
 from shared.llm import get_llm
-from rag.retriever import get_reranked_retriever
+from rag.retriever import get_hybrid_retriever
 
 
 # 이전 대화를 고려해 검색용 독립 질문으로 재구성하는 프롬프트
@@ -103,7 +103,7 @@ def chat(query: str, history: list = None) -> dict:
     search_query = _get_search_query(query, chat_history, llm)
 
     # 2단계: Hybrid Search + Reranking
-    retriever = get_reranked_retriever(k_fetch=10, k_final=5)
+    retriever = get_hybrid_retriever(k=5)
     docs = retriever.invoke(search_query)
 
     # 3단계: 답변 생성
@@ -130,7 +130,7 @@ def chat_stream(query: str, history: list = None) -> Generator[str, None, None]:
     search_query = _get_search_query(query, chat_history, llm)
 
     # 2단계: Hybrid Search + Reranking
-    retriever = get_reranked_retriever(k_fetch=10, k_final=5)
+    retriever = get_hybrid_retriever(k=5)
     docs = retriever.invoke(search_query)
 
     # 3단계: 스트리밍 답변 생성
