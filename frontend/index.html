@@ -267,6 +267,21 @@ const QA_EXAMPLES = [
 
 let chatHistory = [];
 
+// kt_products.py id → 프론트엔드 PRODUCTS id 매핑
+const PRODUCT_ID_MAP = {
+  'sota_k':               'sota_k',
+  'k_intelligence_studio':'ki_studio',
+  'k_gpuaas':             'gpuaas',
+  'cloudflex':            'cloudflex',
+  'managed_private_cloud':'mpc',
+  'giga_office':          'giga_office',
+  'kornet':               'kornet',
+  'flexline':             'flexline',
+  'biz_5g':               '5g_biz',
+  'secure_utm':           'secure_utm',
+  'giga_energy_trade':    'giga_energy',
+};
+
 // ── 초기화 ────────────────────────────────────────────────────────────────
 
 function init() {
@@ -576,6 +591,34 @@ function md(text) {
     .replace(/^(?!<[hup])(.+)$/gm,'<p class="mb-1">$1</p>');
 }
 
+// ── 상품 카탈로그로 이동 ──────────────────────────────────────────────────
+
+function goToProduct(backendId) {
+  const frontendId = PRODUCT_ID_MAP[backendId];
+  if (!frontendId) return;
+  switchTab('catalog');
+  // 카드 로드 (약간의 딜레이로 탭 전환 후 실행)
+  setTimeout(() => loadProductDetail(frontendId), 50);
+}
+
+function renderRecList(recList) {
+  if (!recList || recList.length === 0) return '';
+  return recList.map((rec, i) => {
+    const fid = PRODUCT_ID_MAP[rec.product_id];
+    const clickable = !!fid;
+    return `
+      <div class="border border-gray-200 rounded-xl p-4 mb-3 ${clickable ? 'cursor-pointer hover:border-kt-dark hover:shadow-sm transition' : ''}"
+           ${clickable ? `onclick="goToProduct('${rec.product_id}')"` : ''}>
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="font-semibold text-kt-dark text-sm">${i+1}. ${rec.product_name}</div>
+          ${clickable ? '<span class="text-xs text-blue-500 font-medium">카탈로그 보기 →</span>' : ''}
+        </div>
+        <p class="text-xs text-kt-gray leading-relaxed mb-1"><strong>추천 이유:</strong> ${rec.reason}</p>
+        <p class="text-xs text-kt-light italic">"${rec.talking_point}"</p>
+      </div>`;
+  }).join('');
+}
+
 // ── 고객사 리서치 ─────────────────────────────────────────────────────────
 
 function showStep(containerId, msg, step, total, done = false) {
@@ -628,7 +671,10 @@ async function runCustomer() {
           if (el) el.querySelector('div,span:first-child').outerHTML = '<span class="text-green-500">✓</span>';
         });
         document.getElementById('customer-analysis').innerHTML = md(payload.analysis);
-        document.getElementById('customer-recommendation').innerHTML = md(payload.recommendation);
+        document.getElementById('customer-recommendation').innerHTML =
+          payload.rec_list?.length
+            ? renderRecList(payload.rec_list)
+            : md(payload.recommendation);
         document.getElementById('customer-result').classList.remove('hidden');
       } else if (payload.type === 'error') {
         document.getElementById('customer-steps').innerHTML += `<p class="text-red-400 text-sm">${payload.content}</p>`;

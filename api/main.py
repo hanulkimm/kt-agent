@@ -13,7 +13,7 @@ from typing import List
 from rag.chatbot import chat_stream, chat, is_rag_failure, web_search_stream
 from customer_research.researcher import search_company, search_company_news
 from customer_research.profiler import build_profile
-from customer_research.recommender import recommend_products
+from customer_research.recommender import recommend_products_structured
 from market_research.researcher import search_market_by_product_and_industry, INDUSTRY_KEYWORDS
 from market_research.summarizer import generate_market_report
 
@@ -108,12 +108,13 @@ def api_customer_stream(req: CustomerRequest):
             profile = build_profile(req.company_name, results, news)
 
             yield sse({"type": "progress", "msg": "💡 KT 상품 추천 생성 중...", "step": 3, "total": 3})
-            recommendation = recommend_products(req.company_name, profile.summary or "")
+            recommendation, rec_list = recommend_products_structured(req.company_name, profile.summary or "")
 
             yield sse({
                 "type": "result",
                 "analysis": profile.summary or "",
                 "recommendation": recommendation,
+                "rec_list": rec_list,
             })
         except Exception as e:
             yield sse({"type": "error", "content": str(e)})

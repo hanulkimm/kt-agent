@@ -60,6 +60,50 @@ def recommend_products(company_name: str, company_summary: str) -> str:
     return _format_recommendations(company_name, recommendations)
 
 
+def recommend_products_structured(company_name: str, company_summary: str) -> tuple[str, list]:
+    """(formatted_text, raw_list) 형태로 반환. raw_list는 프론트 클릭 연동용."""
+    llm = get_llm(temperature=0.2)
+    catalog_text = "\n".join(
+        f"[{p['id']}] {p['name']} ({p['category']})\n"
+        f"  설명: {p['description']}\n"
+        f"  활용사례: {', '.join(p['use_cases'])}"
+        for p in KT_B2B_PRODUCTS
+    )
+    prompt = f"""당신은 KT B2B 영업 전문가입니다.
+아래 고객사 분석 내용을 읽고, KT B2B 상품 카탈로그에서 이 고객사에 가장 적합한 상품을 추천해주세요.
+
+## 고객사: {company_name}
+{company_summary}
+
+## KT B2B 상품 카탈로그
+{catalog_text}
+
+## 지시사항
+- 고객사의 현황, 과제, 전략 방향과 연결되는 상품을 3~5개 선정하세요.
+- 반드시 아래 JSON 배열 형식으로만 응답하세요 (마크다운 코드블록 없이 순수 JSON):
+
+[
+  {{
+    "product_id": "상품 id",
+    "product_name": "상품명",
+    "reason": "이 고객사에 추천하는 구체적인 이유 (고객사 상황과 연결하여 2~3문장)",
+    "talking_point": "영업 미팅에서 꺼낼 핵심 한 마디"
+  }}
+]
+"""
+    response = llm.invoke([HumanMessage(content=prompt)])
+    raw = response.content.strip()
+    try:
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        items = json.loads(raw.strip())
+        return _format_recommendations(company_name, items), items
+    except json.JSONDecodeError:
+        return raw, []
+
+
 def _format_recommendations(company_name: str, recommendations: list[dict]) -> str:
     # product_id → url 조회용 맵
     url_map = {p["id"]: p.get("url", "") for p in KT_B2B_PRODUCTS}
