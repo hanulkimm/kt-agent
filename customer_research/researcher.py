@@ -2,7 +2,7 @@
 담당: 고객사 리서치팀
 역할: 고객사 관련 정보 웹 검색 수집
 """
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 
 def search_company(company_name: str, max_results: int = 10) -> list[dict]:

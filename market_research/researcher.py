@@ -2,7 +2,7 @@
 담당: 시장 동향팀
 역할: 웹 검색으로 시장 동향 수집
 """
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from shared.models import MarketReport
 
 

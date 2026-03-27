@@ -51,9 +51,11 @@
 </div>
 
 <!-- ── Tab Nav ─────────────────────────────────────────────────────────── -->
-<div class="flex gap-2 mx-6 mt-5">
+<div class="flex gap-2 mx-6 mt-5 flex-wrap">
   <button class="tab-btn active px-5 py-2.5 rounded-xl text-sm font-medium" onclick="switchTab('catalog')">📦  상품 카탈로그</button>
   <button class="tab-btn px-5 py-2.5 rounded-xl text-sm font-medium text-kt-dark bg-white border border-gray-200" onclick="switchTab('qa')">💬  상품 Q&A</button>
+  <button class="tab-btn px-5 py-2.5 rounded-xl text-sm font-medium text-kt-dark bg-white border border-gray-200" onclick="switchTab('customer')">🏢  고객사 리서치</button>
+  <button class="tab-btn px-5 py-2.5 rounded-xl text-sm font-medium text-kt-dark bg-white border border-gray-200" onclick="switchTab('market')">📊  시장 동향</button>
 </div>
 
 <!-- ── Main Content ────────────────────────────────────────────────────── -->
@@ -119,6 +121,72 @@
         </button>
       </div>
 
+    </div>
+  </div>
+  <!-- └──────────────────────────────────────────────────────────────────┘ -->
+
+  <!-- ┌─ Tab 3: 고객사 리서치 ────────────────────────────────────────────┐ -->
+  <div id="tab-customer" class="tab-panel">
+    <div class="max-w-3xl mx-auto">
+      <div class="bg-white rounded-2xl border border-gray-200 p-7 shadow-sm mb-4">
+        <h2 class="text-lg font-semibold text-kt-dark mb-1">고객사 리서치</h2>
+        <p class="text-sm text-kt-gray mb-4">고객사명을 입력하면 기업 현황 분석과 KT 상품 추천을 제공합니다.</p>
+        <div class="flex gap-2">
+          <input id="customer-input" type="text" placeholder="예: 삼성전자, LG화학, 현대자동차..."
+            onkeydown="if(event.key==='Enter') runCustomer()"
+            class="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-kt-dark transition" />
+          <button onclick="runCustomer()" class="bg-kt-dark text-white px-6 py-3 rounded-xl text-sm font-medium hover:opacity-85 transition whitespace-nowrap">
+            분석 시작
+          </button>
+        </div>
+      </div>
+
+      <!-- 진행 상태 -->
+      <div id="customer-progress" class="hidden bg-white rounded-2xl border border-gray-200 p-5 mb-4">
+        <div id="customer-steps" class="space-y-2"></div>
+      </div>
+
+      <!-- 결과 -->
+      <div id="customer-result" class="hidden space-y-4">
+        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 class="text-sm font-semibold text-kt-gray uppercase tracking-wide mb-3">기업 현황 분석</h3>
+          <div id="customer-analysis" class="prose text-sm text-kt-dark leading-relaxed"></div>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-200 p-6">
+          <h3 class="text-sm font-semibold text-kt-gray uppercase tracking-wide mb-3">KT 상품 추천</h3>
+          <div id="customer-recommendation" class="prose text-sm text-kt-dark leading-relaxed"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- └──────────────────────────────────────────────────────────────────┘ -->
+
+  <!-- ┌─ Tab 4: 시장 동향 ────────────────────────────────────────────────┐ -->
+  <div id="tab-market" class="tab-panel">
+    <div class="max-w-3xl mx-auto">
+      <div class="bg-white rounded-2xl border border-gray-200 p-7 shadow-sm mb-4">
+        <h2 class="text-lg font-semibold text-kt-dark mb-1">시장 동향 리서치</h2>
+        <p class="text-sm text-kt-gray mb-4">상품명과 산업군을 선택하면 시장 동향 보고서를 생성합니다.</p>
+        <div class="flex gap-2 mb-3">
+          <input id="market-product" type="text" placeholder="상품명 예: 클라우드, 5G, AI 보안..."
+            class="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-kt-dark transition" />
+          <select id="market-industry"
+            class="border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-kt-dark transition bg-white text-kt-dark">
+            <option value="">산업군 선택</option>
+          </select>
+        </div>
+        <button onclick="runMarket()" class="w-full bg-kt-dark text-white py-3 rounded-xl text-sm font-medium hover:opacity-85 transition">
+          보고서 생성
+        </button>
+      </div>
+
+      <!-- 진행 상태 -->
+      <div id="market-progress" class="hidden bg-white rounded-2xl border border-gray-200 p-5 mb-4">
+        <div id="market-steps" class="space-y-2"></div>
+      </div>
+
+      <!-- 결과 -->
+      <div id="market-result" class="hidden bg-white rounded-2xl border border-gray-200 p-6 space-y-5"></div>
     </div>
   </div>
   <!-- └──────────────────────────────────────────────────────────────────┘ -->
@@ -258,7 +326,7 @@ function switchTab(name) {
     b.classList.add('bg-white','border','border-gray-200','text-kt-dark');
   });
   document.getElementById('tab-' + name).classList.add('active');
-  const idx = ['catalog','qa'].indexOf(name);
+  const idx = ['catalog','qa','customer','market'].indexOf(name);
   const btn = document.querySelectorAll('.tab-btn')[idx];
   btn.classList.add('active');
   btn.classList.remove('bg-white','border','border-gray-200','text-kt-dark');
@@ -508,7 +576,165 @@ function md(text) {
     .replace(/^(?!<[hup])(.+)$/gm,'<p class="mb-1">$1</p>');
 }
 
+// ── 고객사 리서치 ─────────────────────────────────────────────────────────
+
+function showStep(containerId, msg, step, total, done = false) {
+  const el = document.getElementById(containerId);
+  const existing = document.getElementById(`step-${step}`);
+  const html = `
+    <div id="step-${step}" class="flex items-center gap-2 text-sm">
+      ${done
+        ? '<span class="text-green-500">✓</span>'
+        : '<div class="typing"><span></span><span></span><span></span></div>'}
+      <span class="${done ? 'text-kt-dark' : 'text-kt-gray'}">${msg}</span>
+    </div>`;
+  if (existing) existing.outerHTML = html;
+  else el.insertAdjacentHTML('beforeend', html);
+}
+
+async function runCustomer() {
+  const name = document.getElementById('customer-input').value.trim();
+  if (!name) return;
+
+  document.getElementById('customer-progress').classList.remove('hidden');
+  document.getElementById('customer-result').classList.add('hidden');
+  document.getElementById('customer-steps').innerHTML = '';
+
+  const res = await fetch('/api/customer/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ company_name: name }),
+  });
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop();
+    for (const part of parts) {
+      if (!part.startsWith('data: ')) continue;
+      const payload = JSON.parse(part.slice(6));
+      if (payload.type === 'progress') {
+        showStep('customer-steps', payload.msg, payload.step, payload.total);
+      } else if (payload.type === 'result') {
+        // 완료 표시
+        [1,2,3].forEach(i => {
+          const el = document.getElementById(`step-${i}`);
+          if (el) el.querySelector('div,span:first-child').outerHTML = '<span class="text-green-500">✓</span>';
+        });
+        document.getElementById('customer-analysis').innerHTML = md(payload.analysis);
+        document.getElementById('customer-recommendation').innerHTML = md(payload.recommendation);
+        document.getElementById('customer-result').classList.remove('hidden');
+      } else if (payload.type === 'error') {
+        document.getElementById('customer-steps').innerHTML += `<p class="text-red-400 text-sm">${payload.content}</p>`;
+      }
+    }
+  }
+}
+
+// ── 시장 동향 리서치 ──────────────────────────────────────────────────────
+
+async function loadIndustries() {
+  const res = await fetch('/api/market/industries');
+  const data = await res.json();
+  const sel = document.getElementById('market-industry');
+  data.industries.forEach(ind => {
+    const opt = document.createElement('option');
+    opt.value = ind;
+    opt.textContent = ind;
+    sel.appendChild(opt);
+  });
+}
+
+async function runMarket() {
+  const product = document.getElementById('market-product').value.trim();
+  const industry = document.getElementById('market-industry').value;
+  if (!product || !industry) {
+    alert('상품명과 산업군을 모두 입력해주세요.');
+    return;
+  }
+
+  document.getElementById('market-progress').classList.remove('hidden');
+  document.getElementById('market-result').classList.add('hidden');
+  document.getElementById('market-steps').innerHTML = '';
+
+  const res = await fetch('/api/market/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ product_name: product, industry }),
+  });
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop();
+    for (const part of parts) {
+      if (!part.startsWith('data: ')) continue;
+      const payload = JSON.parse(part.slice(6));
+      if (payload.type === 'progress') {
+        showStep('market-steps', payload.msg, payload.step, payload.total);
+      } else if (payload.type === 'result') {
+        renderMarketReport(payload.report);
+      } else if (payload.type === 'error') {
+        document.getElementById('market-steps').innerHTML += `<p class="text-red-400 text-sm">${payload.content}</p>`;
+      }
+    }
+  }
+}
+
+function renderMarketReport(r) {
+  const sections = [
+    { key: 'market_overview',      label: '1. 시장 개요',        list: false },
+    { key: 'key_trends',           label: '2. 주요 트렌드',       list: true  },
+    { key: 'competitive_landscape',label: '3. 경쟁 환경',         list: false },
+    { key: 'opportunities',        label: '4. 기회 요인',         list: true  },
+    { key: 'threats',              label: '5. 위협 및 리스크',    list: true  },
+    { key: 'summary',              label: '6. 시사점 및 전략적 제언', list: false },
+  ];
+
+  const resultEl = document.getElementById('market-result');
+  resultEl.innerHTML = `
+    <div class="flex items-center gap-2 pb-3 border-b border-gray-100">
+      <span class="text-lg">📊</span>
+      <div>
+        <div class="font-semibold text-kt-dark text-sm">${r.product_name} / ${r.industry}</div>
+        <div class="text-xs text-kt-gray">시장 동향 보고서</div>
+      </div>
+    </div>
+    ${sections.map(s => {
+      const val = r[s.key];
+      if (!val || (Array.isArray(val) && val.length === 0)) return '';
+      const content = s.list
+        ? `<ul class="list-disc pl-4 space-y-1">${val.map(i => `<li>${i}</li>`).join('')}</ul>`
+        : `<p>${val}</p>`;
+      return `
+        <div class="pt-1">
+          <div class="text-xs font-semibold text-kt-gray uppercase tracking-wide mb-1.5">${s.label}</div>
+          <div class="text-sm text-kt-dark leading-relaxed">${content}</div>
+        </div>`;
+    }).join('')}
+    ${r.sources?.length ? `
+      <div class="pt-3 border-t border-gray-100">
+        <div class="text-xs text-kt-light">📎 참고 ${r.sources.length}건</div>
+      </div>` : ''}`;
+  resultEl.classList.remove('hidden');
+}
+
+// ── 초기화 실행 ───────────────────────────────────────────────────────────
+
 init();
+loadIndustries();
 </script>
 </body>
 </html>

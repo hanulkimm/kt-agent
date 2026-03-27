@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python -c \"from flashrank import Ranker; print\\(''ok''\\)\")",
+      "Bash(python -c \":*)",
+      "Bash(python -c \"from langchain_community.retrievers import BM25Retriever, EnsembleRetriever; print\\(''ok''\\)\")",
+      "Bash(python -c \"from langchain.retrievers import EnsembleRetriever; print\\(''ok''\\)\")",
+      "Bash(python -c \"from langchain_community.retrievers.ensemble import EnsembleRetriever; print\\(''ok''\\)\")",
+      "Bash(python -c \"import langchain_community.retrievers as r; print\\(dir\\(r\\)\\)\")",
+      "Bash(1 python -c ':*)",
+      "Bash(1 find:*)",
+      "WebFetch(domain:enterprise.kt.com)",
+      "Bash(fuser -k 7860/tcp)",
+      "Bash(fuser -k 8000/tcp)"
+    ],
+    "additionalDirectories": [
+      "/workspaces/kt-agent"
+    ]
+  }
+}
