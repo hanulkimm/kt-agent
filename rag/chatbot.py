@@ -47,18 +47,20 @@ def _format_docs(docs: List[Document]) -> str:
     return "\n\n".join(doc.page_content for doc in docs)
 
 
+RAG_FAILURE_PHRASES = ["자료에서 확인되지 않습니다", "해당 정보는 자료에서"]
+
+def is_rag_failure(answer: str) -> bool:
+    return any(phrase in answer for phrase in RAG_FAILURE_PHRASES)
+
 def _format_sources(docs: List[Document]) -> List[str]:
-    """출처를 '파일명 p.페이지' 형식으로 반환합니다."""
+    """출처 파일명만 반환합니다 (중복 제거)."""
     seen = set()
     sources = []
     for doc in docs:
         filename = doc.metadata.get("source_file", "알 수 없음")
-        page = doc.metadata.get("page", None)
-        # PyMuPDF는 0-indexed이므로 +1
-        label = f"{filename} p.{page + 1}" if page is not None else filename
-        if label not in seen:
-            seen.add(label)
-            sources.append(label)
+        if filename not in seen:
+            seen.add(filename)
+            sources.append(filename)
     return sources
 
 
@@ -118,6 +120,44 @@ def chat(query: str, history: list = None) -> dict:
         "answer": answer,
         "sources": _format_sources(docs),
     }
+
+
+def web_search_stream(query: str) -> Generator[str, None, None]:
+    """DuckDuckGo 검색 후 LLM으로 요약해 스트리밍합니다."""
+    from ddgs import DDGS
+
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=5))
+    except Exception:
+        results = []
+
+    if not results:
+        yield "웹에서도 관련 정보를 찾을 수 없었습니다."
+        return
+
+    context = "\n\n".join(
+        f"제목: {r['title']}\n내용: {r['body']}\n출처: {r.get('href', '')}"
+        for r in results
+    )
+
+    WEB_PROMPT = ChatPromptTemplate.from_messages([
+        ("system",
+         """아래 웹 검색 결과를 참고하여 사용자의 질문에 답변하세요.
+웹 검색 결과 기반의 답변임을 첫 줄에 명시하세요.
+KT 기업 서비스와 관련된 내용을 중심으로 간결하게 정리하세요.
+
+[웹 검색 결과]
+{context}"""),
+        ("human", "{question}"),
+    ])
+
+    llm = get_llm(temperature=0.0)
+    chain = WEB_PROMPT | llm | StrOutputParser()
+    accumulated = ""
+    for chunk in chain.stream({"question": query, "context": context}):
+        accumulated += chunk
+        yield accumulated
 
 
 def chat_stream(query: str, history: list = None) -> Generator[str, None, None]:

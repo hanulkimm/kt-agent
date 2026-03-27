@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KT 상품 탐색기</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['-apple-system','BlinkMacSystemFont','SF Pro Display','Helvetica Neue','sans-serif'] },
+          colors: { kt: { dark: '#1d1d1f', mid: '#2d2d2f', gray: '#6e6e73', light: '#a1a1a6', bg: '#f5f5f7' } }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { -webkit-font-smoothing: antialiased; }
+    .tab-btn { transition: all .2s; }
+    .tab-btn.active { background: #1d1d1f; color: #f5f5f7; }
+    .tab-btn:not(.active):hover { background: #e5e5ea; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .card { transition: all .2s ease; }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.12); border-color: #1d1d1f !important; }
+    .chip { transition: all .15s; }
+    .chip:hover { background: #1d1d1f; color: #f5f5f7; border-color: #1d1d1f; }
+    .chat-bubble-user { background: #1d1d1f; color: #f5f5f7; border-radius: 18px 18px 4px 18px; }
+    .chat-bubble-bot  { background: #fff; color: #1d1d1f; border: 1px solid #e5e5ea; border-radius: 18px 18px 18px 4px; box-shadow: 0 1px 6px rgba(0,0,0,.05); }
+    .typing span { display:inline-block; width:6px; height:6px; background:#a1a1a6; border-radius:50%; margin:0 2px; animation: bounce .9s infinite; }
+    .typing span:nth-child(2) { animation-delay:.15s; }
+    .typing span:nth-child(3) { animation-delay:.3s; }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+    #chat-messages { scroll-behavior: smooth; }
+    .prose p { margin-bottom: .6em; }
+    .prose strong { font-weight: 600; }
+    .prose ul { list-style: disc; padding-left: 1.2em; margin: .4em 0; }
+    .prose li { margin-bottom: .2em; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #d2d2d7; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-kt-bg min-h-screen font-sans">
+
+<!-- ── Hero Header ─────────────────────────────────────────────────────── -->
+<div class="bg-gradient-to-br from-white to-gray-100 border border-gray-200 mx-6 mt-6 rounded-2xl px-10 py-10 text-center shadow-sm">
+  <span class="inline-block bg-gray-100 border border-gray-200 text-kt-gray text-xs tracking-widest uppercase px-3 py-1 rounded-full mb-4">KT Enterprise</span>
+  <h1 class="text-4xl font-bold text-kt-dark tracking-tight mb-2">상품 탐색기</h1>
+  <p class="text-kt-gray text-base">KT 상품을 찾고, 이해하고, 비교하세요</p>
+</div>
+
+<!-- ── Tab Nav ─────────────────────────────────────────────────────────── -->
+<div class="flex gap-2 mx-6 mt-5">
+  <button class="tab-btn active px-5 py-2.5 rounded-xl text-sm font-medium" onclick="switchTab('catalog')">📦  상품 카탈로그</button>
+  <button class="tab-btn px-5 py-2.5 rounded-xl text-sm font-medium text-kt-dark bg-white border border-gray-200" onclick="switchTab('qa')">💬  상품 Q&A</button>
+</div>
+
+<!-- ── Main Content ────────────────────────────────────────────────────── -->
+<div class="mx-6 mt-4 mb-10">
+
+  <!-- ┌─ Tab 1: 상품 카탈로그 ────────────────────────────────────────────┐ -->
+  <div id="tab-catalog" class="tab-panel active">
+    <div class="flex gap-5">
+
+      <!-- 카드 그리드 -->
+      <div class="flex-1">
+        <p class="text-sm text-kt-gray mb-3">카드를 클릭하면 상세 정보를 확인할 수 있습니다.</p>
+        <div id="product-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+
+        <!-- 전체 카탈로그 accordion -->
+        <div class="mt-5 bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <button onclick="toggleCatalog()" class="w-full flex justify-between items-center px-5 py-4 text-sm font-medium text-kt-dark hover:bg-gray-50 transition">
+            <span>📋  KT 전체 상품 카탈로그 (참고용)</span>
+            <span id="catalog-arrow" class="text-kt-gray text-lg transition-transform">›</span>
+          </button>
+          <div id="catalog-body" class="hidden px-5 pb-5 text-sm text-kt-dark">
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 pt-2" id="full-catalog-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 상세 패널 -->
+      <div class="w-[440px] shrink-0">
+        <div id="detail-panel" class="bg-white rounded-2xl border border-gray-200 p-5 sticky top-4 min-h-52">
+          <p class="text-kt-light text-sm text-center mt-8">← 상품 카드를 클릭하면<br>상세 정보가 여기에 표시됩니다</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <!-- └──────────────────────────────────────────────────────────────────┘ -->
+
+  <!-- ┌─ Tab 2: Q&A ─────────────────────────────────────────────────────┐ -->
+  <div id="tab-qa" class="tab-panel">
+    <div class="max-w-2xl mx-auto flex flex-col" style="height:68vh">
+
+      <!-- 메시지 영역 -->
+      <div id="chat-messages" class="flex-1 overflow-y-auto bg-white rounded-2xl border border-gray-200 p-5 space-y-4 mb-3">
+        <div class="text-center text-kt-light text-sm py-8">
+          <p class="text-2xl mb-2">💬</p>
+          <p>상품에 대해 자유롭게 질문하세요</p>
+          <p class="text-xs mt-1">스펙, 요금, 비교, 도입 방법 등 무엇이든</p>
+        </div>
+        <!-- 예시 버튼 -->
+        <div class="flex flex-wrap justify-center gap-2 pb-2" id="example-chips"></div>
+      </div>
+
+      <!-- 입력창 -->
+      <div class="flex gap-2 bg-white border border-gray-200 rounded-2xl p-3">
+        <button onclick="resetChat()" title="대화 초기화"
+          class="text-kt-light hover:text-kt-dark transition self-end pb-1.5 px-1 text-lg">↺</button>
+        <textarea id="chat-input" rows="1"
+          placeholder="메시지를 입력하세요..."
+          onkeydown="handleChatKey(event)"
+          class="flex-1 resize-none text-sm focus:outline-none py-1 px-2 leading-relaxed max-h-24"></textarea>
+        <button onclick="sendChat()" class="bg-kt-dark text-white px-5 py-2 rounded-xl text-sm font-medium hover:opacity-85 transition self-end">
+          전송
+        </button>
+      </div>
+
+    </div>
+  </div>
+  <!-- └──────────────────────────────────────────────────────────────────┘ -->
+
+</div>
+
+<!-- ── JavaScript ──────────────────────────────────────────────────────── -->
+<script>
+
+// ── 데이터 ────────────────────────────────────────────────────────────────
+
+const PRODUCTS = [
+  { id:'cloudflex',   name:'KT cloudflex',          category:'클라우드',       emoji:'☁️',  tagline:'퍼블릭 클라우드 플랫폼',     rag_query:'KT cloudflex의 주요 기능, 특징, 요금제, 적합한 고객을 설명해줘' },
+  { id:'gpuaas',      name:'K GPUaaS',               category:'AI · GPU',      emoji:'🖥️',  tagline:'GPU 기반 AI 인프라 서비스',  rag_query:'K GPUaaS의 주요 기능, 스펙, 활용 사례, 적합한 고객을 설명해줘' },
+  { id:'ki_studio',   name:'K intelligence Studio', category:'AI',             emoji:'🤖',  tagline:'AI 개발·운영 통합 플랫폼',    rag_query:'K intelligence Studio Cloud의 주요 기능, 특징, 적합한 고객을 설명해줘' },
+  { id:'5g_biz',      name:'KT 5G 업무망',            category:'5G · 네트워크', emoji:'📡',  tagline:'기업 전용 5G 사설망',         rag_query:'KT 5G 업무망의 주요 기능, 특징, 도입 효과, 적합한 고객을 설명해줘' },
+  { id:'giga_office', name:'KT GiGA Office',         category:'커뮤니케이션',  emoji:'🏢',  tagline:'기업 통합 커뮤니케이션',      rag_query:'KT GiGA Office의 주요 기능, 특징, 적합한 고객을 설명해줘' },
+  { id:'giga_energy', name:'KT GiGA energy trade',   category:'비즈니스',      emoji:'⚡',  tagline:'에너지 거래 플랫폼',          rag_query:'KT GiGA energy trade의 주요 기능, 특징, 도입 효과를 설명해줘' },
+  { id:'kornet',      name:'KT Kornet',              category:'인터넷 · 전용선', emoji:'🌐', tagline:'기업 전용 인터넷 회선',       rag_query:'KT Kornet의 주요 기능, 특징, 속도, 적합한 고객을 설명해줘' },
+  { id:'secure_utm',  name:'KT Secure UTM',          category:'보안',           emoji:'🔒',  tagline:'통합 보안 위협 관리',         rag_query:'KT Secure UTM의 주요 기능, 보안 항목, 적합한 고객을 설명해줘' },
+  { id:'sota_k',      name:'SOTA K',                 category:'AI · 생성형 AI', emoji:'✨',  tagline:'KT 기업용 생성형 AI 서비스',  rag_query:'SOTA K의 주요 기능, 특징, 적합한 고객을 설명해줘' },
+  { id:'mpc',         name:'KT managed private cloud', category:'Cloud',        emoji:'🏗️', tagline:'매니지드 프라이빗 클라우드',  rag_query:'KT managed private cloud의 주요 기능, 특징, 적합한 고객을 설명해줘' },
+  { id:'flexline',    name:'KT Flexline',             category:'데이터 서비스', emoji:'🔗',  tagline:'유연한 기업 인터넷 회선',     rag_query:'KT Flexline의 주요 기능, 특징, 적합한 고객을 설명해줘' },
+];
+
+const FULL_CATALOG = [
+  { category: 'AI', subs: [
+    { name: '생성형 AI',  items: ['SOTA K ✅'] },
+    { name: 'AI Studio', items: ['K intelligence Studio Cloud ✅'] },
+    { name: 'AI Infra',  items: ['K GPUaaS ✅'] },
+  ]},
+  { category: 'Cloud', subs: [
+    { name: 'cloudflex',           items: ['KT cloudflex ✅'] },
+    { name: 'managed private cloud', items: ['KT managed private cloud ✅'] },
+  ]},
+  { category: '커뮤니케이션 서비스', subs: [
+    { name: '스마트메시지',   items: ['KT 스마트메시지', 'KT Communis', 'KT 전자고지'] },
+    { name: '기업일반전화',   items: ['KT 기업구내전화', 'KT 이너텔'] },
+    { name: '기업인터넷전화', items: ['KT 기업인터넷전화 biz', 'KT 기업인터넷전화 Centrex', 'Microsoft Teams Phone'] },
+    { name: '전화부가서비스', items: ['KT 링고 V링고', 'KT 발신정보알리미', 'KT 통화매니저'] },
+    { name: '지능망',         items: ['KT 전국대표번호', 'KT 수신자부담 080', 'KT 안심번호 0502'] },
+  ]},
+  { category: '데이터 서비스', subs: [
+    { name: 'cloudline',  items: ['KT cloudline'] },
+    { name: '기업인터넷', items: ['KT GiGA Office ✅', 'KT Kornet ✅', 'KT VPN', 'KT Flexline ✅'] },
+    { name: '일반인터넷', items: ['KT 오피스넷', 'KT 포스넷'] },
+    { name: '전용회선',   items: ['KT 국내전용회선', 'KT 양자암호전용회선'] },
+    { name: '매니지드',   items: ['KT 매니지드ON', 'KT 매니지드'] },
+    { name: '결합패키지', items: ['KT 비즈성공팩'] },
+  ]},
+  { category: '모바일/IoT', subs: [
+    { name: '기업전용5G',     items: ['KT 5G 업무망 ✅', 'KT 기업전용로밍'] },
+    { name: '기업모바일',     items: ['KT 오피스모바일'] },
+    { name: '기업특화 서비스', items: ['KT 랑톡', 'KT skyAuto'] },
+    { name: 'IoT',            items: ['KT LPWA IoT', 'KT IoT LTE', 'KT IoT 5G'] },
+  ]},
+  { category: 'Solutions', subs: [
+    { name: 'CCTV AI 영상분석', items: ['KT CCTV AI 영상분석'] },
+    { name: 'Security',        items: ['KT Secure UTM ✅', 'KT AI 메일보안', 'KT 클린존'] },
+    { name: 'Works',           items: ['비즈메카 EZ', 'KT 공인전자문서센터'] },
+    { name: 'AICC/콜센터',     items: ['KT 콜센터 커스텀', "KT A'Cen Cloud", 'KT AI Contact Center'] },
+    { name: '에너지',          items: ['KT GiGA energy trade ✅'] },
+    { name: '공간 솔루션',     items: ['KT AI 주택형 솔루션', 'KT SafeMate', 'KT Air Map'] },
+    { name: '광고/마케팅',     items: ['K-Ads', 'KT Addressable TV Basic', 'KT 관광분석솔루션(TrIP)'] },
+    { name: '미디어/교육',     items: ['지니TV Biz', 'KT AI 미래교육'] },
+  ]},
+  { category: '기타 소개자료', subs: [
+    { name: '', items: ['KT 광고매체 소개서', 'KT GiGA Sensing 밀폐공간'] },
+  ]},
+];
+
+const QA_EXAMPLES = [
+  'KT cloudflex가 뭐야?',
+  '5G 업무망이랑 Kornet 차이가 뭐야?',
+  '보안 제품 뭐가 있어?',
+  'AI 개발 환경을 위한 상품 추천해줘',
+];
+
+let chatHistory = [];
+
+// ── 초기화 ────────────────────────────────────────────────────────────────
+
+function init() {
+  renderProductGrid();
+  renderFullCatalog();
+  renderQAExamples();
+}
+
+function renderProductGrid() {
+  const grid = document.getElementById('product-grid');
+  grid.innerHTML = PRODUCTS.map(p => `
+    <button onclick="loadProductDetail('${p.id}')"
+      class="card bg-white border border-gray-200 rounded-2xl p-4 text-left cursor-pointer w-full">
+      <div class="text-2xl mb-2">${p.emoji}</div>
+      <div class="font-semibold text-kt-dark text-sm leading-snug mb-1">${p.name}</div>
+      <div class="text-xs text-kt-gray mb-2">${p.category}</div>
+      <div class="text-xs text-kt-light leading-relaxed">${p.tagline}</div>
+    </button>
+  `).join('');
+}
+
+function renderFullCatalog() {
+  const grid = document.getElementById('full-catalog-grid');
+  grid.innerHTML = FULL_CATALOG.map(cat => `
+    <div>
+      <div class="font-semibold text-kt-dark text-xs uppercase tracking-wide border-b border-gray-100 pb-1.5 mb-2">${cat.category}</div>
+      ${cat.subs.map(sub => `
+        <div class="mb-2.5">
+          ${sub.name ? `<div class="text-xs text-kt-gray font-medium mb-1">${sub.name}</div>` : ''}
+          <ul class="space-y-0.5 pl-2">
+            ${sub.items.map(i => `
+              <li class="text-xs ${i.includes('✅') ? 'text-kt-dark' : 'text-kt-light'}">${i}</li>
+            `).join('')}
+          </ul>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function renderQAExamples() {
+  const el = document.getElementById('example-chips');
+  el.innerHTML = QA_EXAMPLES.map(q => `
+    <button onclick="useExample('${q}')"
+      class="chip border border-gray-200 rounded-xl px-3 py-1.5 text-xs text-kt-dark bg-white">
+      ${q}
+    </button>
+  `).join('');
+}
+
+// ── Tab 전환 ──────────────────────────────────────────────────────────────
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.remove('active');
+    b.classList.add('bg-white','border','border-gray-200','text-kt-dark');
+  });
+  document.getElementById('tab-' + name).classList.add('active');
+  const idx = ['catalog','qa'].indexOf(name);
+  const btn = document.querySelectorAll('.tab-btn')[idx];
+  btn.classList.add('active');
+  btn.classList.remove('bg-white','border','border-gray-200','text-kt-dark');
+}
+
+// ── 상품 상세 ─────────────────────────────────────────────────────────────
+
+async function loadProductDetail(productId) {
+  const p = PRODUCTS.find(x => x.id === productId);
+  if (!p) return;
+
+  const panel = document.getElementById('detail-panel');
+  panel.innerHTML = `
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-2xl">${p.emoji}</span>
+      <div>
+        <div class="font-semibold text-kt-dark text-sm">${p.name}</div>
+        <div class="text-xs text-kt-gray">${p.category}</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-1.5 text-kt-gray text-xs">
+      <div class="typing"><span></span><span></span><span></span></div>
+      <span>정보 불러오는 중...</span>
+    </div>`;
+
+  try {
+    const res = await fetch('/api/product/detail', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id: p.id, rag_query: p.rag_query }),
+    });
+    const data = await res.json();
+    const sources = data.sources?.length
+      ? `<div class="mt-3 pt-3 border-t border-gray-100 text-xs text-kt-gray">📄 ${data.sources.join(' · ')}</div>`
+      : '';
+    panel.innerHTML = `
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-2xl">${p.emoji}</span>
+        <div>
+          <div class="font-semibold text-kt-dark text-sm">${p.name}</div>
+          <div class="text-xs text-kt-gray">${p.category}</div>
+        </div>
+      </div>
+      <div class="prose text-sm text-kt-dark leading-relaxed">${md(data.answer)}</div>
+      ${sources}`;
+  } catch(e) {
+    panel.innerHTML = `<p class="text-red-400 text-sm">오류가 발생했습니다</p>`;
+  }
+}
+
+// ── 채팅 Q&A ─────────────────────────────────────────────────────────────
+
+function resetChat() {
+  chatHistory = [];
+  document.getElementById('chat-messages').innerHTML = `
+    <div class="text-center text-kt-light text-sm py-8">
+      <p class="text-2xl mb-2">💬</p>
+      <p>상품에 대해 자유롭게 질문하세요</p>
+      <p class="text-xs mt-1">스펙, 요금, 비교, 도입 방법 등 무엇이든</p>
+    </div>
+    <div class="flex flex-wrap justify-center gap-2 pb-2" id="example-chips"></div>`;
+  renderQAExamples();
+}
+
+function useExample(q) {
+  document.getElementById('chat-input').value = q;
+  sendChat();
+}
+
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+  input.value = '';
+
+  // 예시 칩 숨기기
+  document.getElementById('example-chips').innerHTML = '';
+
+  appendMessage('user', message);
+  const botId = appendMessage('bot', '');
+  showTyping(botId);
+
+  try {
+    const res = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, history: chatHistory }),
+    });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalContent = '';
+    let ragFailed = false;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      for (const part of parts) {
+        if (!part.startsWith('data: ')) continue;
+        const payload = JSON.parse(part.slice(6));
+        if (payload.type === 'token') {
+          finalContent = payload.content;
+          updateMessage(botId, finalContent);
+        } else if (payload.type === 'rag_failed') {
+          ragFailed = true;
+        }
+      }
+    }
+
+    chatHistory.push({ role: 'user', content: message });
+    chatHistory.push({ role: 'assistant', content: finalContent });
+
+    // RAG 실패 시 웹 검색 제안 버튼 추가
+    if (ragFailed) {
+      appendWebSearchOffer(message);
+    }
+
+  } catch(e) {
+    updateMessage(botId, '⚠️ 오류가 발생했습니다. 다시 시도해주세요.');
+  }
+}
+
+function appendWebSearchOffer(originalQuery) {
+  const container = document.getElementById('chat-messages');
+  const offerId = 'offer-' + Date.now();
+  const div = document.createElement('div');
+  div.className = 'flex justify-start';
+  div.id = offerId;
+  div.innerHTML = `
+    <div class="chat-bubble-bot px-4 py-3 text-sm max-w-xs lg:max-w-md">
+      <p class="text-kt-gray text-xs mb-2">브로슈어에서 관련 정보를 찾지 못했습니다.<br>웹 검색으로 추가 정보를 찾아드릴까요?</p>
+      <button onclick="doWebSearch('${originalQuery.replace(/'/g,"\\'")}', '${offerId}')"
+        class="bg-blue-50 text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 text-xs hover:bg-blue-100 transition font-medium">
+        🔍 웹에서 검색하기
+      </button>
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function doWebSearch(query, offerId) {
+  // 제안 버튼 제거
+  const offerEl = document.getElementById(offerId);
+  if (offerEl) offerEl.remove();
+
+  appendMessage('user', `🔍 "${query}" 웹 검색`);
+  const botId = appendMessage('bot', '');
+  showTyping(botId);
+
+  try {
+    const res = await fetch('/api/chat/websearch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalContent = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      for (const part of parts) {
+        if (!part.startsWith('data: ')) continue;
+        const payload = JSON.parse(part.slice(6));
+        if (payload.type === 'token') {
+          finalContent = payload.content;
+          updateMessage(botId, finalContent);
+        }
+      }
+    }
+
+    chatHistory.push({ role: 'user', content: query });
+    chatHistory.push({ role: 'assistant', content: finalContent });
+
+  } catch(e) {
+    updateMessage(botId, '⚠️ 웹 검색 중 오류가 발생했습니다.');
+  }
+}
+
+function appendMessage(role, content) {
+  const id = 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+  const container = document.getElementById('chat-messages');
+  const isUser = role === 'user';
+  const div = document.createElement('div');
+  div.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+  div.innerHTML = `
+    <div id="${id}" class="${isUser ? 'chat-bubble-user' : 'chat-bubble-bot'} px-4 py-3 text-sm max-w-xs lg:max-w-md leading-relaxed">
+      ${content ? md(content) : ''}
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return id;
+}
+
+function showTyping(id) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = `<div class="typing"><span></span><span></span><span></span></div>`;
+}
+
+function updateMessage(id, content) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.innerHTML = md(content);
+    el.closest('#chat-messages').scrollTop = el.closest('#chat-messages').scrollHeight;
+  }
+}
+
+// ── 전체 카탈로그 토글 ────────────────────────────────────────────────────
+
+function toggleCatalog() {
+  const body = document.getElementById('catalog-body');
+  const arrow = document.getElementById('catalog-arrow');
+  body.classList.toggle('hidden');
+  arrow.style.transform = body.classList.contains('hidden') ? '' : 'rotate(90deg)';
+}
+
+// ── 마크다운 간이 파서 ────────────────────────────────────────────────────
+
+function md(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g,'<em>$1</em>')
+    .replace(/^###\s(.+)$/gm,'<h3 class="font-semibold mt-2 mb-1 text-kt-dark">$1</h3>')
+    .replace(/^##\s(.+)$/gm,'<h2 class="font-bold mt-3 mb-1 text-kt-dark">$1</h2>')
+    .replace(/^#\s(.+)$/gm,'<h1 class="font-bold mt-3 mb-1 text-kt-dark text-base">$1</h1>')
+    .replace(/^[-•]\s(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs,'<ul class="list-disc pl-4 my-1 space-y-0.5">$1</ul>')
+    .replace(/📄/g,'📄')
+    .replace(/\n\n/g,'</p><p class="mb-1">')
+    .replace(/\n/g,'<br>')
+    .replace(/^(?!<[hup])(.+)$/gm,'<p class="mb-1">$1</p>');
+}
+
+init();
+</script>
+</body>
+</html>

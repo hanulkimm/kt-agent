@@ -14,12 +14,15 @@ rank-bm25
 flashrank
 
 gradio
+fastapi
+uvicorn[standard]
+python-multipart
 python-dotenv
 pandas
 tqdm
 networkx
 wikipedia
-duckduckgo-search
+ddgs
 
 langchain-graph-retriever
 graph-retriever
