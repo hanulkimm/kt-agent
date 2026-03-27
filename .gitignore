@@ -205,3 +205,7 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Vector DB index (로컬에서 생성됨)
+faiss_index/
+chroma_db/
